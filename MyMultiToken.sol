@@ -11,10 +11,8 @@ import "tba-tutorial-pinata/contracts/ERC6551Registry.sol";
 
 contract MyMultiToken is Context, ERC165, IERC1155, IERC1155MetadataURI{
     address public registry;
-    uint256[]  CLOTH = [0,1,2,3,4,5,6,7,8,9];
-    uint256[]  SWORD = [10,11,12,13,14,15,16,17,18,19];
-    // tokenId => tokenAddress
-    mapping (uint256 => address) public  recordTxTokenAddress;
+
+    address public TBABalanceTable;
 
     using Address for address;
 
@@ -30,9 +28,10 @@ contract MyMultiToken is Context, ERC165, IERC1155, IERC1155MetadataURI{
     /**
      * @dev See {_setURI}.
      */
-    constructor(string memory uri_,address _registryAddress) {
+    constructor(string memory uri_,address _registryAddress,address _TBABalanceTableAddr) {
         _setURI(uri_);
         registry = _registryAddress;
+        TBABalanceTable = _TBABalanceTableAddr;
 
     }
 
@@ -212,12 +211,29 @@ contract MyMultiToken is Context, ERC165, IERC1155, IERC1155MetadataURI{
         _afterTokenTransfer(operator, from, to, ids, amounts, data);
 
         // 判断是否为6551 registry 部署的地址
-        bool _isRegistryDeployed = ERC6551Registry(registry).deployedAddress(to);
-        if (_isRegistryDeployed){
-        recordTxTokenAddress[id] = to;
+        bool _isRegistryDeployedFrom = ERC6551Registry(registry).deployedAddress(from);
+        bool _isRegistryDeployedTo = ERC6551Registry(registry).deployedAddress(to);
+        // bool success;
+        if (_isRegistryDeployedFrom){
+        bytes memory datas = abi.encodeWithSignature("subBalance(address,address,uint256,uint256)",address(this),from,id,amount);
+        (bool success, bytes memory result) = TBABalanceTable.call{value:0}(datas);
+        if (!success) {
+            assembly {
+                revert(add(result, 32), mload(result))
+            }
+        }
         return;
         }
-
+        else if(_isRegistryDeployedTo){
+        bytes memory datas = abi.encodeWithSignature("addBalance(address,address,uint256,uint256)",address(this),to,id,amount);
+        (bool success, bytes memory result) = TBABalanceTable.call{value:0}(datas);
+        if (!success) {
+            assembly {
+                revert(add(result, 32), mload(result))
+            }
+        }
+        return;
+        }
         _doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
     }
 

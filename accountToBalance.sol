@@ -8,8 +8,18 @@ contract accountToBalance {
     constructor() {
         owner = msg.sender;
     }
+    struct tokenInfo {
+        address _account;
+        address _tokenAddr;
+        uint256 _tokenId;
+        uint256 _balance;
+    }
     mapping (address => bool) public  supportedToken;
-    mapping(address => mapping(address => mapping(uint256 => uint256))) public balances;
+    // walletAddress => (tokenAddress => (tokenId => balance))
+    // mapping(address => uint256[][] ) public balances;
+    mapping(address => mapping(address => mapping(uint256 => uint256))) public subscript;
+    mapping (uint256 => tokenInfo) public balances;
+    uint256 private index;
 
 
     modifier onlySupported(address _tokenAddr){
@@ -28,36 +38,42 @@ contract accountToBalance {
     function decreaseTokenAddress(address _tokenAddress) public onlyOwner onlySupported(_tokenAddress) {
         supportedToken[_tokenAddress] = false;
     }
-     function getBalance(address _tokenAddr, uint256 _tokenId) public view returns (uint256) {
-     uint256  _balance =  ERC1155(_tokenAddr).balanceOf(msg.sender, _tokenId);
-        return _balance;
-     }
-        function setBalance(address _tokenAddr,uint256 _tokenId) public onlySupported(_tokenAddr) {
-        uint256 _balance = getBalance(_tokenAddr, _tokenId);
-        balances[msg.sender][_tokenAddr][_tokenId] = _balance;
-        }
+     function get1155NFTInfo(address _account) public view returns (tokenInfo[] memory t) {
 
-    function _getBalance(address _tokenAddr,address _account, uint256 _tokenId) private  view returns (uint256) {
-     uint256  _balance =  ERC1155(_tokenAddr).balanceOf(_account, _tokenId);
-        return _balance;
-    }
-    
-    function _getBalanceBatch(address _tokenAddr,address _account,uint256[] memory _tokenId) public   view returns () {
-        uint256 _tokenIdLength = _tokenId.length;
-        _balances = new uint256[](_tokenIdLength);
-        for(uint256 i =0;i<_tokenIdLength;i++){
-            _balances[i] = getBalance(_tokenAddr, _account, _tokenId[i]);
-            require(balances[_account][_tokenAddr][_tokenId[i]] == _balances[i],"data error");
+        tokenInfo[] memory result = new tokenInfo[](index);
+        uint256 resultIndex = 0;
+         for(uint256 i=0;i<index;i++){
+             if(balances[i]._account == _account){
+                result[resultIndex] = balances[i];
+                resultIndex++;
+             }
+         }
+         t = new tokenInfo[](resultIndex);
+        for (uint256 j = 0; j < resultIndex; j++) {
+            t[j] = result[j];
         }
-    }
-    function setBalanceBatch(address _account,address _tokenAddr,uint256[] memory _tokenId) public onlySupported(_tokenAddr) {
-        uint256 _tokenIdLength = _tokenId.length;
-        uint256  _balance;
-        for(uint256 i = 0;i<_tokenIdLength;i++){
-            _balance = getBalance(_tokenAddr,_account ,_tokenId[i]);
-        bool _isMappingEmpty = balances[_account][_tokenAddr][_tokenId[i]]==0;
-        require(_isMappingEmpty,"Already exists");
-            balances[_account][_tokenAddr][_tokenId[i]] = _balance;
+        return t;
+     }
+    function addBalance(address _tokenAddr,address _account,uint256 _tokenId,uint256 _amount) public onlySupported(_tokenAddr) {
+        subscript[_account][_tokenAddr][_tokenId] = index;
+        if(balances[index]._balance!=0){
+        balances[index]._balance += _amount;
         }
+        balances[index]._account = _account;
+        balances[index]._tokenAddr = _tokenAddr;
+        balances[index]._tokenId = _tokenId;
+        balances[index]._balance = _amount;
+        index++;
+    }
+    function subBalance(address _tokenAddr,address _account,uint256 _tokenId,uint256 _amount) public onlySupported(_tokenAddr) {
+        subscript[_account][_tokenAddr][_tokenId] = index;
+        if(balances[index]._balance!=0){
+        balances[index]._balance -= _amount;
+        }
+        balances[index]._account = _account;
+        balances[index]._tokenAddr = _tokenAddr;
+        balances[index]._tokenId = _tokenId;
+        balances[index]._balance = _amount;
+        index++;
     }
 }
