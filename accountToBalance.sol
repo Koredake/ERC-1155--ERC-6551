@@ -41,7 +41,23 @@ contract accountToBalance {
      uint256  _balance =  ERC1155(_tokenAddr).balanceOf(_account, _tokenId);
         return _balance;
     }
-    function setBalanceBatch(address[] memory _account,address _tokenAddr,uint256[] memory _tokenId) public onlySupported(_tokenAddr) {
-        // todo
+    
+    function _getBalanceBatch(address _tokenAddr,address _account,uint256[] memory _tokenId) public   view returns () {
+        uint256 _tokenIdLength = _tokenId.length;
+        _balances = new uint256[](_tokenIdLength);
+        for(uint256 i =0;i<_tokenIdLength;i++){
+            _balances[i] = getBalance(_tokenAddr, _account, _tokenId[i]);
+            require(balances[_account][_tokenAddr][_tokenId[i]] == _balances[i],"data error");
+        }
+    }
+    function setBalanceBatch(address _account,address _tokenAddr,uint256[] memory _tokenId) public onlySupported(_tokenAddr) {
+        uint256 _tokenIdLength = _tokenId.length;
+        uint256  _balance;
+        for(uint256 i = 0;i<_tokenIdLength;i++){
+            _balance = getBalance(_tokenAddr,_account ,_tokenId[i]);
+        bool _isMappingEmpty = balances[_account][_tokenAddr][_tokenId[i]]==0;
+        require(_isMappingEmpty,"Already exists");
+            balances[_account][_tokenAddr][_tokenId[i]] = _balance;
+        }
     }
 }
