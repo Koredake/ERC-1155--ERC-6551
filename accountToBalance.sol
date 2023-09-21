@@ -15,8 +15,6 @@ contract accountToBalance {
         uint256 _balance;
     }
     mapping (address => bool) public  supportedToken;
-    // walletAddress => (tokenAddress => (tokenId => balance))
-    // mapping(address => uint256[][] ) public balances;
     mapping(address => mapping(address => mapping(uint256 => uint256))) public subscript;
     mapping (uint256 => tokenInfo) public balances;
     uint256 private index;
